@@ -1,47 +1,5 @@
 import java.util.*
 
-fun main() {
-    val scanner = Scanner(System.`in`)
-
-    // Дефолтные значения
-    val defaultKey  = "133457799BBCDFF1"
-    val defaultText = "0123456789ABCDEF"
-
-    // Функция для проверки длины ввода
-    fun getValidatedInput(prompt: String, defaultValue: String): String {
-        while (true) {
-            println(prompt)
-            val input = scanner.nextLine()
-
-            // Если пользователь ничего не ввел, используем значение по умолчанию
-            if (input.isBlank()) {
-                println("The default value is used: $defaultValue")
-                return defaultValue
-            }
-
-            // Проверяем длину ввода (16 шестнадцатиричных символов = 64 бита)
-            if (input.length == 16) {
-                return input
-            } else {
-                println("Wrong input! Please, try again.")
-            }
-        }
-    }
-
-    val key = getValidatedInput("Enter the key (16 hexadecimal characters):", defaultKey)
-    val plaintext = getValidatedInput("Enter the text to encrypt (16 hexadecimal characters):", defaultText)
-
-    val des = DES()
-
-    // Шифрование
-    val ciphertext = des.encrypt(plaintext, key)
-    println("Ciphertext: $ciphertext")
-
-    // Расшифрование
-    val decryptedText = des.decrypt(ciphertext, key)
-    println("Decrypted Text: $decryptedText")
-}
-
 class DES {
 
     // Таблицы перестановок и расширений (упрощенные)
@@ -249,7 +207,7 @@ class DES {
         var right = permutedBlock.substring(32, 64)
 
         // 3. Генерация подключей
-        val subKeys = generateSubKeys(hexToBinary(key))
+        val subKeys = generateSubKeys(key)
 
         // 4. 16 раундов
         for (subKey in subKeys) {
@@ -273,10 +231,10 @@ class DES {
         var right = permutedBlock.substring(32, 64)
 
         // 3. Генерация подключей
-        val subKeys = generateSubKeys(hexToBinary(key))
+        val subKeys = generateSubKeys(key)
 
         // 4. 16 раундов с подключами в обратном порядке
-        for (subKey in subKeys.reversed()) {
+        for (subKey in subKeys.asReversed()) {
             val tempRight = right
             right = xor(left, roundFunction(right, subKey))
             left = tempRight
@@ -300,5 +258,21 @@ class DES {
         return binary.chunked(4).joinToString("") {
             Integer.toHexString(Integer.parseInt(it, 2))
         }.uppercase(Locale.getDefault())
+    }
+
+    // Преобразование шестнадцатеричной строки в ASCII строку
+    fun hexToASCII(hexStr: String): String {
+        val output = StringBuilder()
+        for (i in hexStr.indices step 2) {
+            val str = hexStr.substring(i, i + 2)
+            val char = str.toInt(16).toChar()
+            output.append(char)
+        }
+        return output.toString()
+    }
+
+    // Преобразование ASCII строки в шестнадцатеричную
+    fun asciiToHex(ascii: String): String {
+        return ascii.toByteArray().joinToString("") { String.format("%02X", it) }
     }
 }
