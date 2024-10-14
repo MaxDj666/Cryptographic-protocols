@@ -29,16 +29,13 @@ fun main() {
         println("Публичный ключ (e): $publicE")
         println("Публичный ключ (n): $publicN")
 
-        // Подготовка сообщения
-        val message = "Hello!!!" // Должно быть не более 8 символов (64 бита)
+        // Ввод сообщения пользователем
+        val message: String = getUserInput()
+
+        // Преобразование сообщения в шестнадцатеричный формат
         val des = DES()
         val messageHex = des.asciiToHex(message)
-        if (messageHex.length > 16) {
-            println("Сообщение слишком длинное для одного блока DES (максимум 8 символов).")
-            socket.close()
-            return
-        }
-        // Дополнение сообщения до 16 шестнадцатеричных символов
+        // Дополнение сообщения до 16 шестнадцатеричных символов (8 байт)
         val paddedMessageHex = messageHex.padEnd(16, '0')
         println("Сообщение в шестнадцатеричном виде: $paddedMessageHex")
 
@@ -71,7 +68,33 @@ fun main() {
     }
 }
 
-// Генерация случайной шестнадцатеричной строки заданной длины
+/**
+ * Функция для получения ввода пользователя с проверкой длины.
+ * Максимальная длина сообщения: 8 символов.
+ */
+fun getUserInput(): String {
+    while (true) {
+        println("Введите сообщение (максимум 8 символов):")
+        val input = readlnOrNull()
+
+        if (input == null) {
+            println("Ошибка чтения ввода. Попробуйте ещё раз.")
+            continue
+        }
+
+        if (input.length > 8) {
+            println("Ошибка: сообщение должно содержать не более 8 символов. Попробуйте ещё раз.")
+            continue
+        }
+
+        // Дополнение сообщения пробелами до 8 символов, если необходимо
+        return input.padEnd(8, ' ')
+    }
+}
+
+/**
+ * Генерация случайной шестнадцатеричной строки заданной длины.
+ */
 fun generateRandomHexString(length: Int): String {
     val chars = "0123456789ABCDEF"
     val rnd = SecureRandom()
