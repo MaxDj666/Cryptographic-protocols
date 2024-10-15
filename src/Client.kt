@@ -29,35 +29,44 @@ fun main() {
         println("Публичный ключ (e): $publicE")
         println("Публичный ключ (n): $publicN")
 
-        // Ввод сообщения пользователем
-        val message: String = getUserInput()
-
-        // Преобразование сообщения в шестнадцатеричный формат
-        val des = DES()
-        val messageHex = des.asciiToHex(message)
-        // Дополнение сообщения до 16 шестнадцатеричных символов (8 байт)
-        val paddedMessageHex = messageHex.padEnd(16, '0')
-        println("Сообщение в шестнадцатеричном виде: $paddedMessageHex")
-
-        // Генерация случайного ключа DES (16 шестнадцатеричных символов = 64 бита)
-        val desKeyHex = generateRandomHexString(16)
-        println("Сгенерированный ключ DES: $desKeyHex")
-
-        // Шифрование ключа DES с помощью публичного ключа RSA сервера
-        val desKeyBigInt = BigInteger(desKeyHex, 16)
+        // Инициализация RSA и DES
         val rsa = RSA()
-        val encryptedDesKey = rsa.encrypt(desKeyBigInt, publicKey)
-        val encryptedDesKeyHex = encryptedDesKey.toString(16)
-        println("Зашифрованный ключ DES (hex): $encryptedDesKeyHex")
+        val des = DES()
 
-        // Шифрование сообщения с помощью DES
-        val encryptedMessageHex = des.encrypt(paddedMessageHex, desKeyHex)
-        println("Зашифрованное сообщение (hex): $encryptedMessageHex")
+        while (true) {
+            // Ввод сообщения пользователем
+            val message: String = getUserInput()
 
-        // Отправка зашифрованного ключа DES и зашифрованного сообщения на сервер
-        output.println(encryptedDesKeyHex)
-        output.println(encryptedMessageHex)
-        println("Отправлены зашифрованный ключ DES и зашифрованное сообщение на сервер.")
+            if (message.equals("quit", ignoreCase = true)) {
+                println("Завершение работы клиента.")
+                break
+            }
+
+            // Преобразование сообщения в шестнадцатеричный формат
+            val messageHex = des.asciiToHex(message)
+            // Дополнение сообщения до 16 шестнадцатеричных символов (8 байт)
+            val paddedMessageHex = messageHex.padEnd(16, '0')
+            println("Сообщение в шестнадцатеричном виде: $paddedMessageHex")
+
+            // Генерация случайного ключа DES (16 шестнадцатеричных символов = 64 бита)
+            val desKeyHex = generateRandomHexString(16)
+            println("Сгенерированный ключ DES: $desKeyHex")
+
+            // Шифрование ключа DES с помощью публичного ключа RSA сервера
+            val desKeyBigInt = BigInteger(desKeyHex, 16)
+            val encryptedDesKey = rsa.encrypt(desKeyBigInt, publicKey)
+            val encryptedDesKeyHex = encryptedDesKey.toString(16)
+            println("Зашифрованный ключ DES (hex): $encryptedDesKeyHex")
+
+            // Шифрование сообщения с помощью DES
+            val encryptedMessageHex = des.encrypt(paddedMessageHex, desKeyHex)
+            println("Зашифрованное сообщение (hex): $encryptedMessageHex")
+
+            // Отправка зашифрованного ключа DES и зашифрованного сообщения на сервер
+            output.println(encryptedDesKeyHex)
+            output.println(encryptedMessageHex)
+            println("Отправлено зашифрованное сообщение на сервер.\n")
+        }
 
         // Закрытие соединения
         socket.close()
@@ -74,12 +83,16 @@ fun main() {
  */
 fun getUserInput(): String {
     while (true) {
-        println("Введите сообщение (максимум 8 символов):")
-        val input = readlnOrNull()
+        println("Введите сообщение (максимум 8 символов) или 'quit' для выхода:")
+        val input = readlnOrNull()?.trim()
 
         if (input == null) {
             println("Ошибка чтения ввода. Попробуйте ещё раз.")
             continue
+        }
+
+        if (input.equals("quit", ignoreCase = true)) {
+            return input
         }
 
         if (input.length > 8) {
