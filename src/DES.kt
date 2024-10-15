@@ -198,7 +198,7 @@ class DES {
     }
 
     // Шифрование одного блока
-    fun encrypt(block: String, key: String): String {
+    private fun encrypt(block: String, key: String): String {
         // 1. Начальная перестановка
         val permutedBlock = permute(hexToBinary(block), initialPermutation)
 
@@ -222,7 +222,7 @@ class DES {
     }
 
     // Дешифрование аналогично шифрованию, но с подключами в обратном порядке
-    fun decrypt(block: String, key: String): String {
+    private fun decrypt(block: String, key: String): String {
         // 1. Начальная перестановка
         val permutedBlock = permute(hexToBinary(block), initialPermutation)
 
@@ -245,6 +245,51 @@ class DES {
         return binaryToHex(permute(preOutput, finalPermutation))
     }
 
+    // Метод для шифрования в режиме ECB
+    fun ecbEncrypt(message: String, key: String): String {
+        val blocks = splitIntoBlocks(message, 8) // 8 символов = 64 бита
+        val encryptedBlocks = blocks.map { block ->
+            val blockHex = asciiToHex(block)
+            encrypt(blockHex, key)
+        }
+        return encryptedBlocks.joinToString("")
+    }
+
+    // Метод для дешифрования в режиме ECB
+    fun ecbDecrypt(encryptedMessage: String, key: String): String {
+        val encryptedBlocks = splitIntoEncryptedBlocks(encryptedMessage, 16) // 16 hex символов = 64 бита
+        val decryptedBlocks = encryptedBlocks.map { block ->
+            decrypt(block, key)
+        }
+        return decryptedBlocks.joinToString("") { hexToASCII(it) }
+    }
+
+    // Разделение сообщения на блоки фиксированной длины с паддингом
+    private fun splitIntoBlocks(message: String, blockSize: Int): List<String> {
+        val blocks = mutableListOf<String>()
+        var current = message
+        while (current.length > blockSize) {
+            blocks.add(current.substring(0, blockSize))
+            current = current.substring(blockSize)
+        }
+        // Паддинг последнего блока
+        if (current.isNotEmpty()) {
+            blocks.add(current.padEnd(blockSize, ' '))
+        }
+        return blocks
+    }
+
+    // Разделение зашифрованного сообщения на блоки фиксированной длины
+    private fun splitIntoEncryptedBlocks(encryptedMessage: String, blockSize: Int): List<String> {
+        val blocks = mutableListOf<String>()
+        var current = encryptedMessage
+        while (current.length >= blockSize) {
+            blocks.add(current.substring(0, blockSize))
+            current = current.substring(blockSize)
+        }
+        return blocks
+    }
+
     // Преобразование шестнадцатеричной строки в бинарную
     private fun hexToBinary(hex: String): String {
         return hex.map {
@@ -261,7 +306,7 @@ class DES {
     }
 
     // Преобразование шестнадцатеричной строки в ASCII строку
-    fun hexToASCII(hexStr: String): String {
+    private fun hexToASCII(hexStr: String): String {
         val output = StringBuilder()
         for (i in hexStr.indices step 2) {
             val str = hexStr.substring(i, i + 2)
@@ -272,7 +317,7 @@ class DES {
     }
 
     // Преобразование ASCII строки в шестнадцатеричную
-    fun asciiToHex(ascii: String): String {
+    private fun asciiToHex(ascii: String): String {
         return ascii.toByteArray().joinToString("") { String.format("%02X", it) }
     }
 }

@@ -56,9 +56,8 @@ fun main() {
                     decryptedDesKeyHex = decryptedDesKeyHex.padStart(16, '0')
                     println("Расшифрованный ключ DES: $decryptedDesKeyHex")
 
-                    // Расшифровка сообщения с помощью DES
-                    val decryptedMessageHex = des.decrypt(encryptedMessageHex, decryptedDesKeyHex)
-                    val decryptedMessage = des.hexToASCII(decryptedMessageHex)
+                    // Расшифровка сообщения с помощью DES в режиме ECB
+                    val decryptedMessage = des.ecbDecrypt(encryptedMessageHex, decryptedDesKeyHex)
                     println("Расшифрованное сообщение: $decryptedMessage")
                 }
 

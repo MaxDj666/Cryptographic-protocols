@@ -42,11 +42,11 @@ fun main() {
                 break
             }
 
-            // Преобразование сообщения в шестнадцатеричный формат
-            val messageHex = des.asciiToHex(message)
-            // Дополнение сообщения до 16 шестнадцатеричных символов (8 байт)
-            val paddedMessageHex = messageHex.padEnd(16, '0')
-            println("Сообщение в шестнадцатеричном виде: $paddedMessageHex")
+            // Проверка, что сообщение не пустое
+            if (message.isEmpty()) {
+                println("Ошибка: сообщение не должно быть пустым. Попробуйте ещё раз.")
+                continue
+            }
 
             // Генерация случайного ключа DES (16 шестнадцатеричных символов = 64 бита)
             val desKeyHex = generateRandomHexString(16)
@@ -58,13 +58,13 @@ fun main() {
             val encryptedDesKeyHex = encryptedDesKey.toString(16)
             println("Зашифрованный ключ DES (hex): $encryptedDesKeyHex")
 
-            // Шифрование сообщения с помощью DES
-            val encryptedMessageHex = des.encrypt(paddedMessageHex, desKeyHex)
-            println("Зашифрованное сообщение (hex): $encryptedMessageHex")
+            // Шифрование сообщения с помощью DES в режиме ECB
+            val encryptedMessageECB = des.ecbEncrypt(message, desKeyHex)
+            println("Зашифрованное сообщение (ECB, hex): $encryptedMessageECB")
 
             // Отправка зашифрованного ключа DES и зашифрованного сообщения на сервер
             output.println(encryptedDesKeyHex)
-            output.println(encryptedMessageHex)
+            output.println(encryptedMessageECB)
             println("Отправлено зашифрованное сообщение на сервер.\n")
         }
 
@@ -79,30 +79,12 @@ fun main() {
 
 /**
  * Функция для получения ввода пользователя с проверкой длины.
- * Максимальная длина сообщения: 8 символов.
+ * Максимальная длина сообщения: произвольная, но делится на 8 символов.
  */
 fun getUserInput(): String {
-    while (true) {
-        println("Введите сообщение (максимум 8 символов) или 'quit' для выхода:")
-        val input = readlnOrNull()?.trim()
-
-        if (input == null) {
-            println("Ошибка чтения ввода. Попробуйте ещё раз.")
-            continue
-        }
-
-        if (input.equals("quit", ignoreCase = true)) {
-            return input
-        }
-
-        if (input.length > 8) {
-            println("Ошибка: сообщение должно содержать не более 8 символов. Попробуйте ещё раз.")
-            continue
-        }
-
-        // Дополнение сообщения пробелами до 8 символов, если необходимо
-        return input.padEnd(8, ' ')
-    }
+    println("Введите сообщение (любая длина) или 'quit' для выхода:")
+    val input = readlnOrNull()?.trim() ?: ""
+    return input
 }
 
 /**
