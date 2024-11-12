@@ -28,21 +28,21 @@ fun main() {
                 output.println(publicNHex)
                 println("Отправлен публичный ключ клиенту.")
 
-                // Приём параметров p, q, g и y от клиента
+                // Приём параметров p, q, g и dsaPublicKey от клиента
                 val pHex = input.readLine()
                 val qHex = input.readLine()
                 val gHex = input.readLine()
-                val yHex = input.readLine()
+                val dsaPublicKeyHex = input.readLine()
 
                 val p = BigInteger(pHex, 16)
                 val q = BigInteger(qHex, 16)
                 val g = BigInteger(gHex, 16)
-                val y = BigInteger(yHex, 16)
+                val dsaPublicKey = BigInteger(dsaPublicKeyHex, 16)
                 println("""
                     p = $p
                     q = $q
                     g = $g
-                    y = $y
+                    dsaPublicKey = $dsaPublicKey
                 """.trimIndent())
 
                 while (true) {
@@ -62,6 +62,7 @@ fun main() {
                     }
                     println("Получено зашифрованное сообщение: $encryptedMessageHex")
 
+                    // Приём подписи
                     val rHex = input.readLine() ?: break
                     val sHex = input.readLine() ?: break
 
@@ -83,7 +84,7 @@ fun main() {
 
                     // Проверка цифровой подписи
                     val isValidSignature = DSA.verifySignature(
-                        decryptedMessage.trim().toByteArray(Charsets.UTF_8), r, s, p, q, g, y
+                        decryptedMessage.trim().toByteArray(Charsets.UTF_8), r, s, p, q, g, dsaPublicKey
                     )
 
                     if (isValidSignature) {

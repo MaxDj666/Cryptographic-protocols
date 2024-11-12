@@ -21,7 +21,7 @@ object SHA256 {
         0x748f82ee, 0x78a5636f, 0x84c87814.toInt(), 0x8cc70208.toInt(), 0x90befffa.toInt(), 0xa4506ceb.toInt(), 0xbef9a3f7.toInt(), 0xc67178f2.toInt()
     )
 
-    private fun padMessage(message: ByteArray): ByteArray {
+    /*private fun padMessage(message: ByteArray): ByteArray {
         val messageLenBits = message.size * 8
         val paddingLength = (448 - (messageLenBits + 1) % 512 + 512) % 512
         val paddedMessage = ByteArray(message.size + paddingLength / 8 + 8)
@@ -29,7 +29,7 @@ object SHA256 {
         paddedMessage[message.size] = 0x80.toByte()
         ByteBuffer.wrap(paddedMessage, paddedMessage.size - 8, 8).order(ByteOrder.BIG_ENDIAN).putLong(messageLenBits.toLong())
         return paddedMessage
-    }
+    }*/
 
     private fun processBlock(block: ByteArray, hash: IntArray) {
         val w = IntArray(64)
