@@ -29,13 +29,31 @@ fun main() {
         println("Публичный ключ (e): $publicE")
         println("Публичный ключ (n): $publicN")
 
+        // Генерация ключей DSA
+        val (params, keys) = DSA.generateKeys()
+        val (p, q) = params
+        val (g, y) = keys
+        val x = BigInteger(160, SecureRandom()).mod(q.subtract(BigInteger.ONE)).add(BigInteger.ONE) // Приватный ключ
+        println("""
+            p = $p
+            q = $q
+            g = $g
+            y = $y
+        """.trimIndent())
+
+        // Отправка параметров p, q, g и y серверу
+        output.println(p.toString(16)) // Отправляем p
+        output.println(q.toString(16)) // Отправляем q
+        output.println(g.toString(16)) // Отправляем g
+        output.println(y.toString(16)) // Отправляем y
+
         // Инициализация RSA и DES
         val rsa = RSA()
         val des = DES()
 
         while (true) {
             // Ввод сообщения пользователем
-            val message: String = getUserInput()
+            val message: String = getUserInput().trim()
 
             if (message.equals("quit", ignoreCase = true)) {
                 println("Завершение работы клиента.")
@@ -62,9 +80,16 @@ fun main() {
             val encryptedMessageECB = des.ecbEncrypt(message, desKeyHex)
             println("Зашифрованное сообщение (ECB, hex): $encryptedMessageECB")
 
-            // Отправка зашифрованного ключа DES и зашифрованного сообщения на сервер
+            // Создаем цифровую подпись для сообщения
+            val (r, s) = DSA.signMessage(message.toByteArray(Charsets.UTF_8), p, q, g, x)
+            val rHex = r.toString(16)
+            val sHex = s.toString(16)
+
+            // Отправка на сервер
             output.println(encryptedDesKeyHex)
             output.println(encryptedMessageECB)
+            output.println(rHex)
+            output.println(sHex)
             println("Отправлено зашифрованное сообщение на сервер.\n")
         }
 

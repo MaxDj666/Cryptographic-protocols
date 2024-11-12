@@ -17,8 +17,9 @@ fun main() {
                 val input = BufferedReader(InputStreamReader(clientSocket.getInputStream()))
                 val output = PrintWriter(clientSocket.getOutputStream(), true)
 
-                // Инициализация RSA
+                // Инициализация RSA и DES
                 val rsa = RSA()
+                val des = DES()
 
                 // Отправка публичного ключа клиенту (e и n в шестнадцатеричном формате)
                 val publicEHex = rsa.publicKey.first.toString(16)
@@ -27,8 +28,22 @@ fun main() {
                 output.println(publicNHex)
                 println("Отправлен публичный ключ клиенту.")
 
-                // Создание экземпляра DES один раз для всей сессии
-                val des = DES()
+                // Приём параметров p, q, g и y от клиента
+                val pHex = input.readLine()
+                val qHex = input.readLine()
+                val gHex = input.readLine()
+                val yHex = input.readLine()
+
+                val p = BigInteger(pHex, 16)
+                val q = BigInteger(qHex, 16)
+                val g = BigInteger(gHex, 16)
+                val y = BigInteger(yHex, 16)
+                println("""
+                    p = $p
+                    q = $q
+                    g = $g
+                    y = $y
+                """.trimIndent())
 
                 while (true) {
                     // Приём зашифрованного ключа DES
@@ -47,6 +62,9 @@ fun main() {
                     }
                     println("Получено зашифрованное сообщение: $encryptedMessageHex")
 
+                    val rHex = input.readLine() ?: break
+                    val sHex = input.readLine() ?: break
+
                     // Расшифровка ключа DES с помощью приватного ключа RSA
                     val encryptedDesKey = BigInteger(encryptedDesKeyHex, 16)
                     val decryptedDesKeyBigInt = rsa.decrypt(encryptedDesKey)
@@ -59,6 +77,20 @@ fun main() {
                     // Расшифровка сообщения с помощью DES в режиме ECB
                     val decryptedMessage = des.ecbDecrypt(encryptedMessageHex, decryptedDesKeyHex)
                     println("Расшифрованное сообщение: $decryptedMessage")
+
+                    val r = BigInteger(rHex, 16)
+                    val s = BigInteger(sHex, 16)
+
+                    // Проверка цифровой подписи
+                    val isValidSignature = DSA.verifySignature(
+                        decryptedMessage.trim().toByteArray(Charsets.UTF_8), r, s, p, q, g, y
+                    )
+
+                    if (isValidSignature) {
+                        println("Подпись верна.")
+                    } else {
+                        println("Ошибка проверки подписи!")
+                    }
                 }
 
                 // Закрытие соединения
