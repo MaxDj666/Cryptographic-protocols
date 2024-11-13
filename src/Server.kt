@@ -72,7 +72,7 @@ fun main() {
                         decryptedMessage.trim().toByteArray(Charsets.UTF_8), signature.first, signature.second
                     )
 
-                    if (!isValidSignature) {
+                    if (isValidSignature) {
                         println("${GREEN}Подпись верна.${RESET}")
                     } else {
                         println("${RED}Ошибка проверки подписи!${RESET}")

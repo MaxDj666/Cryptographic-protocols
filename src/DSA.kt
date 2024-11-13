@@ -3,17 +3,43 @@ import java.security.SecureRandom
 
 class DSA {
     var q: BigInteger
-    var p: BigInteger
+    var p: BigInteger?
     var g: BigInteger
     private var privateKey: BigInteger? = null
     var publicKey: BigInteger? = null
     private val random = SecureRandom()
 
     init {
-        // Параметры p, q, g — большие простые числа. Они фиксированы для данной системы.
-        q = BigInteger.probablePrime(160, random)  // Порядок подгруппы (160 битов)
-        p = BigInteger.probablePrime(1024, random) // Модуль (1024 бита)
-        g = BigInteger.valueOf(2).modPow((p.subtract(BigInteger.ONE)).divide(q), p) // Генератор g
+        // Генерация параметров p, q, g
+        do {
+            q = BigInteger.probablePrime(160, random)  // Порядок подгруппы (160 битов)
+            p = generateP(q) // Модуль (1024 бита), такой что p - 1 делится на q
+        } while (p == null)  // Повторяем до тех пор, пока подходящий p не будет найден
+
+        // Вычисляем g = h^((p-1)/q) mod p
+        g = generateG(p!!, q)
+    }
+
+    // Функция для генерации p, такого чтобы p - 1 делилось на q
+    private fun generateP(q: BigInteger): BigInteger? {
+        val bitLength = 1024
+        val pCandidate = q.shiftLeft(bitLength - 160).add(BigInteger.ONE)
+
+        // Проверяем, является ли p простым, и что p - 1 делится на q
+        return if (pCandidate.isProbablePrime(100) && pCandidate.subtract(BigInteger.ONE).mod(q) == BigInteger.ZERO) {
+            pCandidate
+        } else {
+            null
+        }
+    }
+
+    // Генерация g = h^((p-1)/q) mod p
+    private fun generateG(p: BigInteger, q: BigInteger): BigInteger {
+        var g: BigInteger
+        do {
+            g = BigInteger.valueOf(2).modPow((p.subtract(BigInteger.ONE)).divide(q), p)
+        } while (g == BigInteger.ONE)
+        return g
     }
 
     // Генерация пары ключей (закрытого и открытого ключей)
@@ -22,7 +48,7 @@ class DSA {
         publicKey = g.modPow(privateKey, p)                 // Открытый ключ y = g^x mod p
     }
 
-    fun getPublicKey(): Pair<BigInteger, BigInteger> {
+    fun getPublicKey(): Pair<BigInteger?, BigInteger> {
         return Pair(p, publicKey!!)
     }
 
