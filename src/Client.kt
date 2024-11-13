@@ -11,48 +11,27 @@ fun main() {
         val socket = Socket(serverAddress, port)
         println("Подключено к серверу по адресу $serverAddress:$port")
 
-        val input = BufferedReader(InputStreamReader(socket.getInputStream()))
-        val output = PrintWriter(socket.getOutputStream(), true)
+        // Инициализация
+        val des = DES()
+        val rsa = RSA()
+        val dsa = DSA()
+
+        val out = ObjectOutputStream(socket.getOutputStream())
+        val input = ObjectInputStream(socket.getInputStream())
 
         // Приём публичного ключа от сервера
-        val publicEHex = input.readLine()
-        val publicNHex = input.readLine()
-        if (publicEHex == null || publicNHex == null) {
-            println("Не удалось получить публичный ключ от сервера.")
-            socket.close()
-            return
-        }
+        val publicE = input.readObject() as BigInteger
+        val publicN = input.readObject() as BigInteger
         println("Получен публичный ключ от сервера.")
-        val publicE = BigInteger(publicEHex, 16)
-        val publicN = BigInteger(publicNHex, 16)
-        val publicKey = Pair(publicE, publicN)
+
+        val rsaPublicKey = Pair(publicE, publicN)
         println("Публичный ключ (e): $publicE")
         println("Публичный ключ (n): $publicN")
 
         // Генерация ключей DSA
-        val keys = DSA.generateKeys()
-        val p = keys.p
-        val q = keys.q
-        val g = keys.g
-        val dsaPrivateKey = keys.privateKey
-        val dsaPublicKey = keys.publicKey
-        println("""
-            p = $p
-            q = $q
-            g = $g
-            privateKey = $dsaPrivateKey
-            publicKey = $dsaPublicKey
-        """.trimIndent())
-
-        // Отправка параметров p, q, g и publicKey серверу
-        output.println(p.toString(16)) // Отправляем p
-        output.println(q.toString(16)) // Отправляем q
-        output.println(g.toString(16)) // Отправляем g
-        output.println(dsaPublicKey.toString(16)) // Отправляем publicKey
-
-        // Инициализация RSA и DES
-        val rsa = RSA()
-        val des = DES()
+        dsa.generateKeys()
+        val (p, dsaPublicKey) = dsa.getPublicKey()
+        println("Сгенерирован публичный ключ DSA: ($p, $dsaPublicKey)")
 
         while (true) {
             // Ввод сообщения пользователем
@@ -71,28 +50,27 @@ fun main() {
 
             // Генерация случайного ключа DES (16 шестнадцатеричных символов = 64 бита)
             val desKeyHex = generateRandomHexString(16)
-            println("Сгенерированный ключ DES: $desKeyHex")
+            println("Сгенерированный ключ DES (hex): $desKeyHex")
 
             // Шифрование ключа DES с помощью публичного ключа RSA сервера
             val desKeyBigInt = BigInteger(desKeyHex, 16)
-            val encryptedDesKey = rsa.encrypt(desKeyBigInt, publicKey)
-            val encryptedDesKeyHex = encryptedDesKey.toString(16)
-            println("Зашифрованный ключ DES (hex): $encryptedDesKeyHex")
+            val encryptedDesKey = rsa.encrypt(desKeyBigInt, rsaPublicKey)
+            println("Зашифрованный ключ DES: $encryptedDesKey")
 
             // Шифрование сообщения с помощью DES в режиме ECB
             val encryptedMessageECB = des.ecbEncrypt(message, desKeyHex)
-            println("Зашифрованное сообщение (ECB, hex): $encryptedMessageECB")
+            println("Зашифрованное сообщение (ECB): $encryptedMessageECB")
 
             // Создаем цифровую подпись для сообщения
-            val (r, s) = DSA.signMessage(message.toByteArray(Charsets.UTF_8), p, q, g, dsaPrivateKey)
-            val rHex = r.toString(16)
-            val sHex = s.toString(16)
+            val signature = dsa.signMessage(message.toByteArray(Charsets.UTF_8))
+            println("Сообщение подписано: $signature")
 
             // Отправка на сервер
-            output.println(encryptedDesKeyHex)
-            output.println(encryptedMessageECB)
-            output.println(rHex)
-            output.println(sHex)
+            out.writeObject(encryptedDesKey)
+            out.writeObject(encryptedMessageECB)
+            out.writeObject(signature)
+            out.writeObject(p)
+            out.writeObject(dsaPublicKey)
             println("Отправлено зашифрованное сообщение на сервер.\n")
         }
 

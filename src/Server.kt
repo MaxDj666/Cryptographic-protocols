@@ -1,6 +1,11 @@
 import java.io.*
 import java.net.ServerSocket
 import java.math.BigInteger
+import java.security.SecureRandom
+
+const val RED = "\u001B[31m"
+const val GREEN = "\u001B[32m"
+const val RESET = "\u001B[0m"
 
 fun main() {
     val port = 9999
@@ -11,93 +16,67 @@ fun main() {
         val clientSocket = serverSocket.accept()
         println("Клиент подключился: ${clientSocket.inetAddress.hostAddress}")
 
+        // Инициализация
+        val des = DES()
+        val rsa = RSA()
+        val dsa = DSA()
+
         // Обработка клиента в отдельном потоке
         Thread {
             try {
-                val input = BufferedReader(InputStreamReader(clientSocket.getInputStream()))
-                val output = PrintWriter(clientSocket.getOutputStream(), true)
+                val input = ObjectInputStream(clientSocket.getInputStream())
+                val output = ObjectOutputStream(clientSocket.getOutputStream())
 
-                // Инициализация RSA и DES
-                val rsa = RSA()
-                val des = DES()
-
-                // Отправка публичного ключа клиенту (e и n в шестнадцатеричном формате)
-                val publicEHex = rsa.publicKey.first.toString(16)
-                val publicNHex = rsa.publicKey.second.toString(16)
-                output.println(publicEHex)
-                output.println(publicNHex)
+                // Отправка публичного ключа клиенту
+                val publicE = rsa.publicKey.first
+                val publicN = rsa.publicKey.second
+                output.writeObject(publicE)
+                output.writeObject(publicN)
                 println("Отправлен публичный ключ клиенту.")
-
-                // Приём параметров p, q, g и dsaPublicKey от клиента
-                val pHex = input.readLine()
-                val qHex = input.readLine()
-                val gHex = input.readLine()
-                val dsaPublicKeyHex = input.readLine()
-
-                val p = BigInteger(pHex, 16)
-                val q = BigInteger(qHex, 16)
-                val g = BigInteger(gHex, 16)
-                val dsaPublicKey = BigInteger(dsaPublicKeyHex, 16)
-                println("""
-                    p = $p
-                    q = $q
-                    g = $g
-                    dsaPublicKey = $dsaPublicKey
-                """.trimIndent())
 
                 while (true) {
                     // Приём зашифрованного ключа DES
-                    val encryptedDesKeyHex = input.readLine()
-                    if (encryptedDesKeyHex == null) {
-                        println("Клиент отключился.")
-                        break
-                    }
-                    println("Получен зашифрованный ключ DES: $encryptedDesKeyHex")
+                    val encryptedDesKey = input.readObject() as BigInteger
+                    println("Получен зашифрованный ключ DES: $encryptedDesKey")
 
                     // Приём зашифрованного сообщения
-                    val encryptedMessageHex = input.readLine()
-                    if (encryptedMessageHex == null) {
-                        println("Клиент отключился до отправки сообщения.")
-                        break
-                    }
-                    println("Получено зашифрованное сообщение: $encryptedMessageHex")
+                    val encryptedMessage = input.readObject() as String
+                    println("Получено зашифрованное сообщение: $encryptedMessage")
 
-                    // Приём подписи
-                    val rHex = input.readLine() ?: break
-                    val sHex = input.readLine() ?: break
+                    val signature = input.readObject() as Pair<BigInteger, BigInteger>
+                    val p = input.readObject() as BigInteger
+                    val dsaPublicKey = input.readObject() as BigInteger
+                    println("Получена подпись: $signature")
+                    println("Получен публичный ключ DSA: ($p, $dsaPublicKey)")
+
+                    dsa.q = BigInteger.probablePrime(160, SecureRandom())
+                    dsa.p = p
+                    dsa.g = BigInteger.valueOf(2).modPow((p.subtract(BigInteger.ONE)).divide(dsa.q), p)
+                    dsa.publicKey = dsaPublicKey
 
                     // Расшифровка ключа DES с помощью приватного ключа RSA
-                    val encryptedDesKey = BigInteger(encryptedDesKeyHex, 16)
-                    val decryptedDesKeyBigInt = rsa.decrypt(encryptedDesKey)
-                    var decryptedDesKeyHex = decryptedDesKeyBigInt.toString(16)
+                    val decryptedDesKey = rsa.decrypt(encryptedDesKey)
+                    var decryptedDesKeyHex = decryptedDesKey.toString(16)
 
                     // Убедимся, что ключ DES имеет 16 шестнадцатеричных символов (64 бита)
                     decryptedDesKeyHex = decryptedDesKeyHex.padStart(16, '0')
                     println("Расшифрованный ключ DES: $decryptedDesKeyHex")
 
                     // Расшифровка сообщения с помощью DES в режиме ECB
-                    val decryptedMessage = des.ecbDecrypt(encryptedMessageHex, decryptedDesKeyHex)
-                    println("Расшифрованное сообщение: $decryptedMessage")
-
-                    val r = BigInteger(rHex, 16)
-                    val s = BigInteger(sHex, 16)
+                    val decryptedMessage = des.ecbDecrypt(encryptedMessage, decryptedDesKeyHex)
+                    println("${GREEN}Расшифрованное сообщение: $decryptedMessage${RESET}")
 
                     // Проверка цифровой подписи
-                    val isValidSignature = DSA.verifySignature(
-                        decryptedMessage.trim().toByteArray(Charsets.UTF_8), r, s, p, q, g, dsaPublicKey
+                    val isValidSignature = dsa.verifySignature(
+                        decryptedMessage.trim().toByteArray(Charsets.UTF_8), signature.first, signature.second
                     )
 
-                    if (isValidSignature) {
-                        println("Подпись верна.")
+                    if (!isValidSignature) {
+                        println("${GREEN}Подпись верна.${RESET}")
                     } else {
-                        println("Ошибка проверки подписи!")
+                        println("${RED}Ошибка проверки подписи!${RESET}")
                     }
                 }
-
-                // Закрытие соединения
-                clientSocket.close()
-                println("Соединение с клиентом закрыто.\n")
-
             } catch (e: Exception) {
                 e.printStackTrace()
                 clientSocket.close()
