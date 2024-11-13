@@ -1,7 +1,6 @@
 import java.io.*
 import java.net.ServerSocket
 import java.math.BigInteger
-import java.security.SecureRandom
 
 const val RED = "\u001B[31m"
 const val GREEN = "\u001B[32m"
@@ -44,14 +43,16 @@ fun main() {
                     println("Получено зашифрованное сообщение: $encryptedMessage")
 
                     val signature = input.readObject() as Pair<BigInteger, BigInteger>
+                    val q = input.readObject() as BigInteger
                     val p = input.readObject() as BigInteger
+                    val g = input.readObject() as BigInteger
                     val dsaPublicKey = input.readObject() as BigInteger
                     println("Получена подпись: $signature")
                     println("Получен публичный ключ DSA: ($p, $dsaPublicKey)")
 
-                    dsa.q = BigInteger.probablePrime(160, SecureRandom())
+                    dsa.q = q
                     dsa.p = p
-                    dsa.g = BigInteger.valueOf(2).modPow((p.subtract(BigInteger.ONE)).divide(dsa.q), p)
+                    dsa.g = g
                     dsa.publicKey = dsaPublicKey
 
                     // Расшифровка ключа DES с помощью приватного ключа RSA
