@@ -11,14 +11,14 @@ fun main() {
     val serverSocket = ServerSocket(port)
     println("Сервер запущен и слушает порт $port")
 
+    // Инициализация
+    val des = DES()
+    val rsa = RSA()
+    val dsa = DSA()
+
     while (true) {
         val clientSocket = serverSocket.accept()
         println("Клиент подключился: ${clientSocket.inetAddress.hostAddress}")
-
-        // Инициализация
-        val des = DES()
-        val rsa = RSA()
-        val dsa = DSA()
 
         // Обработка клиента в отдельном потоке
         Thread {

@@ -12,7 +12,7 @@ class DSA {
     init {
         // Генерация параметров p, q, g
         do {
-            q = BigInteger.probablePrime(160, random)  // Порядок подгруппы (160 битов)
+            q = BigInteger.probablePrime(256, random)  // Порядок подгруппы (256 битов)
             p = generateP(q) // Модуль (1024 бита), такой что p - 1 делится на q
         } while (p == null)  // Повторяем до тех пор, пока подходящий p не будет найден
 
@@ -20,16 +20,24 @@ class DSA {
         g = generateG(p!!, q)
     }
 
-    // Функция для генерации p, такого чтобы p - 1 делилось на q
+    // Функция для генерации p такого, чтобы p - 1 делилось на q и p было простым
     private fun generateP(q: BigInteger): BigInteger? {
         val bitLength = 1024
-        val pCandidate = q.shiftLeft(bitLength - 160).add(BigInteger.ONE)
+        val pCandidate: BigInteger
 
-        // Проверяем, является ли p простым, и что p - 1 делится на q
-        return if (pCandidate.isProbablePrime(100) && pCandidate.subtract(BigInteger.ONE).mod(q) == BigInteger.ZERO) {
-            pCandidate
-        } else {
-            null
+        while (true) {
+            // Генерируем случайное значение k, соответствующее требуемой длине
+            val k = BigInteger(bitLength - q.bitLength(), random)
+
+            // Вычисляем p = k * q + 1
+            pCandidate = k.multiply(q).add(BigInteger.ONE)
+
+            // Проверяем, является ли p простым
+            return if (pCandidate.bitLength() == bitLength && pCandidate.isProbablePrime(100)) {
+                pCandidate
+            } else {
+                null
+            }
         }
     }
 
@@ -44,7 +52,7 @@ class DSA {
 
     // Генерация пары ключей (закрытого и открытого ключей)
     fun generateKeys() {
-        privateKey = BigInteger(160, random).mod(q) // Закрытый ключ x < q
+        privateKey = BigInteger(256, random).mod(q) // Закрытый ключ x < q
         publicKey = g.modPow(privateKey, p)                 // Открытый ключ y = g^x mod p
     }
 
@@ -64,7 +72,7 @@ class DSA {
         var r: BigInteger
 
         do {
-            k = BigInteger(160, random).mod(q) // Случайное k < q
+            k = BigInteger(256, random).mod(q) // Случайное k < q
             r = g.modPow(k, p).mod(q)                  // r = (g^k mod p) mod q
         } while (r == BigInteger.ZERO)
 
